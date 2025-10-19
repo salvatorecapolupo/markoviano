@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Catena di Markov semplice</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background: #f9fafb; padding: 2rem; }
+    textarea { resize: vertical; }
+    .token-row input { width: 70px; text-align: center; }
+    pre { background: #f1f3f5; padding: 1rem; border-radius: .5rem; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h2 class="mb-3 text-center">Catena di Markov (demo semplice)</h2>
+
+<p>Una <b>catena di Markov</b> è un modello probabilistico in cui:</p>
+  <ul>
+    <li>Abbiamo <b>stati</b> (es. parole, numeri, città).</li>
+    <li>Ogni stato può passare a uno o più stati successivi con certe <b>probabilità</b>.</li>
+    <li>La scelta del prossimo stato dipende solo dallo <b>stato corrente</b>, non dalla storia completa.</li>
+  </ul>
+  <p>Esempio pratico con parole:</p>
+
+  <h5>Probabilità parola → parola:</h5>
+  <table class="table table-bordered">
+    <thead>
+      <tr>
+        <th>Stato</th>
+        <th>Parole successive possibili</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>il</td><td>gatto (0.5), cane (0.5)</td></tr>
+      <tr><td>gatto</td><td>corre (0.7), dorme (0.3)</td></tr>
+      <tr><td>cane</td><td>abbaia (0.6), dorme (0.4)</td></tr>
+      <tr><td>corre</td><td>veloce (1.0)</td></tr>
+      <tr><td>dorme</td><td>tranquillo (1.0)</td></tr>
+      <tr><td>abbaia</td><td>forte (1.0)</td></tr>
+    </tbody>
+  </table>
+
+  <div class="mb-3">
+    <label for="inputText" class="form-label">Inserisci una frase (max 25 parole):</label>
+    <textarea id="inputText" class="form-control" rows="2" placeholder="es: il gatto corre sul tetto mentre il cane abbaia"></textarea>
+  </div>
+
+  <div class="text-center mb-3">
+    <button id="suggestBtn" class="btn btn-secondary me-2">Suggerisci frase 🇮🇹</button>
+    <button id="buildBtn" class="btn btn-primary">Crea catena</button>
+  </div>
+
+  <div id="probContainer" class="mt-4"></div>
+
+  <div class="mb-3 text-center">
+    <button id="generateBtn" class="btn btn-success d-none">Genera testo</button>
+  </div>
+
+  <div id="output" class="mt-4">
+    <h5>Risultato:</h5>
+    <pre id="resultText"></pre>
+  </div>
+
+<h2> Da studiare e sperimentare </h2>
+
+<p>Il blocco di codice JavaScript seguente fa quanto segue:</p>
+<ul>
+  <li><b>Quando l'utente clicca sul pulsante "Suggerisci frase"</b> (rappresentato da <code>suggestBtn</code>), viene eseguita una funzione asincrona.</li>
+  <li>Si sceglie una frase casuale dalla lista <code>englishPhrases</code>.</li>
+  <li>La funzione chiama un <b>servizio di traduzione online</b> tramite <code>fetch</code>, passando la frase in inglese e richiedendo la traduzione in italiano (<code>langpair=en|it</code>).</li>
+  <li>Si attende la risposta con <code>await res.json()</code>, che converte i dati JSON ricevuti in un oggetto JavaScript.</li>
+  <li>Dalla risposta, si prende il campo <code>responseData.translatedText</code>, che contiene la frase tradotta.</li>
+  <li>La frase tradotta viene inserita nel campo di input dell’utente (<code>input.value = trad;</code>).</li>
+  <li>Se la richiesta fallisce (ad esempio problemi di rete o CORS), viene mostrato un messaggio di errore nel campo di input.</li>
+</ul>
+<p>In sintesi: <b>cliccando il pulsante si genera una frase inglese casuale e la si traduce in italiano, mostrando il risultato all'utente</b>.</p>
+
+
+<pre>
+
+const englishPhrases = [
+  "The sun shines over the hills",
+  "A cat sleeps near the window",
+  "The wind moves the trees slowly",
+  "The child runs in the green park",
+  "The rain falls softly on the roofs",
+  "The dog barks when the bell rings",
+  "The stars light up the night sky",
+  "The sea is calm under the moonlight"
+];
+
+suggestBtn.addEventListener("click", async () => {
+  const phrase = englishPhrases[Math.floor(Math.random() * englishPhrases.length)];
+  try {
+    const res = await fetch(
+      "https://api.mymemory.translated.net/get?q=" + encodeURIComponent(phrase) + "&langpair=en|it"
+    );
+    const data = await res.json();
+    const trad = data.responseData.translatedText;
+    input.value = trad;
+  } catch (e) {
+    input.value = "Non riesco a contattare il servizio di traduzione.";
+  }
+});
+
+</pre>
+
+</div>
+
+<script>
+const input = document.getElementById("inputText");
+const buildBtn = document.getElementById("buildBtn");
+const suggestBtn = document.getElementById("suggestBtn");
+const probContainer = document.getElementById("probContainer");
+const generateBtn = document.getElementById("generateBtn");
+const resultText = document.getElementById("resultText");
+
+// ✅ Frasi inglesi base da tradurre (per ottenere frasi italiane)
+const englishPhrases = [
+  "The sun shines over the hills",
+  "A cat sleeps near the window",
+  "The wind moves the trees slowly",
+  "The child runs in the green park",
+  "The rain falls softly on the roofs",
+  "The dog barks when the bell rings",
+  "The stars light up the night sky",
+  "The sea is calm under the moonlight"
+];
+
+// Suggerisci frase tradotta in italiano
+suggestBtn.addEventListener("click", async () => {
+  const phrase = englishPhrases[Math.floor(Math.random() * englishPhrases.length)];
+  try {
+    const res = await fetch(
+      "https://api.mymemory.translated.net/get?q=" + encodeURIComponent(phrase) + "&langpair=en|it"
+    );
+    const data = await res.json();
+    const trad = data.responseData.translatedText;
+    input.value = trad;
+  } catch (e) {
+    input.value = "Non riesco a contattare il servizio di traduzione.";
+  }
+});
+
+// Crea catena Markoviana con euristica semplice
+buildBtn.addEventListener("click", () => {
+  const text = input.value.trim();
+  if (!text) return alert("Inserisci o genera una frase prima!");
+  
+  const tokens = text.split(/\s+/);
+  if (tokens.length > 25) return alert("La frase è troppo lunga! (max 25 parole)");
+  
+  const uniqueTokens = [...new Set(tokens)];
+  const chain = {};
+
+  // Costruzione euristica
+  uniqueTokens.forEach(t => {
+    chain[t] = {};
+    uniqueTokens.forEach(u => {
+      if (t === u) {
+        chain[t][u] = 0;
+      } else {
+        const idxT = tokens.indexOf(t);
+        const idxU = tokens.indexOf(u);
+
+        // if (idxU === idxT + 1) chain[t][u] = (0.8 + Math.random() * 0.15).toFixed(2);
+        // else chain[t][u] = (0.01 + Math.random() * 0.09).toFixed(2);
+
+        if (t === u) {
+        chain[t][u] = 0; // mai stessa parola
+        } else {
+        const idxT = tokens.indexOf(t);
+        const idxU = tokens.indexOf(u);
+        const distanza = Math.abs(idxU - idxT);
+
+        // probabilità base più distribuita:
+        let base;
+        if (distanza === 1) base = 0.4 + Math.random() * 0.3; // più probabile parola successiva
+        else if (distanza === 2) base = 0.1 + Math.random() * 0.2; // possibile ma meno diretta
+        else base = Math.random() * 0.1; // lontana ma possibile
+
+        // bonus per parole grammaticalmente comuni
+        if (["il", "la", "e", "di", "a", "che", "con"].includes(t.toLowerCase())) {
+            base += 0.1; // articoli e congiunzioni generano ramificazioni
+        }
+
+        chain[t][u] = base.toFixed(2);
+        }
+
+      }
+    });
+  });
+
+  // Normalizza righe
+  for (const t in chain) {
+    let sum = Object.values(chain[t]).reduce((a,b)=>a+parseFloat(b),0);
+    for (const u in chain[t]) chain[t][u] = (chain[t][u]/sum).toFixed(2);
+
+    // let sum = Object.values(chain[t]).reduce((a,b)=>a+parseFloat(b),0);
+    // if (sum === 0) continue;
+    // for (const u in chain[t]) chain[t][u] = (chain[t][u]/sum).toFixed(2);
+  }
+
+  // Mostra tabella
+  let html = '<h5>Probabilità di transizione (editabili)</h5>';
+  html += '<div class="table-responsive"><table class="table table-sm table-bordered">';
+  html += '<thead><tr><th>Da → A</th>' + uniqueTokens.map(u => `<th>${u}</th>`).join('') + '</tr></thead><tbody>';
+  for (const t of uniqueTokens) {
+    html += `<tr class="token-row"><td><b>${t}</b></td>`;
+    for (const u of uniqueTokens) {
+      html += `<td><input type="number" step="0.01" min="0" max="1" value="${chain[t][u]}" data-from="${t}" data-to="${u}" class="form-control form-control-sm"></td>`;
+    }
+    html += '</tr>';
+  }
+  html += '</tbody></table></div>';
+  probContainer.innerHTML = html;
+
+  generateBtn.classList.remove("d-none");
+
+  // Genera testo casuale basato sulla catena
+  generateBtn.onclick = () => {
+    document.querySelectorAll('#probContainer input').forEach(inp => {
+      const f = inp.dataset.from, t = inp.dataset.to;
+      chain[f][t] = parseFloat(inp.value);
+    });
+
+    let current = tokens[0];
+    const result = [current];
+
+    for (let i=0; i<tokens.length*2; i++) {
+      const probs = chain[current];
+      if (!probs) break;
+      const r = Math.random();
+      let cumulative = 0, next = current;
+      for (const [token, p] of Object.entries(probs)) {
+        cumulative += parseFloat(p);
+        if (r <= cumulative) { next = token; break; }
+      }
+      result.push(next);
+      current = next;
+    }
+
+    resultText.textContent = result.join(" ");
+  };
+});
+</script>
+</body>
+</html>
